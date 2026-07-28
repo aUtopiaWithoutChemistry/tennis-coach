@@ -1,0 +1,18 @@
+AGENTS.md
+.DS_Store
+.cache/
+.models/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Personal recordings and generated analysis artifacts stay local.
+artifacts/
+data/
+private/
+*.mov
+*.mp4
+*.m4v
+*.wav
