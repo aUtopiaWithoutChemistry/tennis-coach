@@ -4,9 +4,9 @@ This is a concise record of decisions, experiments, resolved failures, verified 
 
 ## Current Milestone
 
-**M0 — Video Inspector: complete**
+**M1 — Pose baseline: frame-sampling foundation complete**
 
-Goal: validate a video input and report the metadata needed by later frame processing.
+Current goal: produce timestamped RGB frames that a pose estimator can process without loading an entire video into memory.
 
 ## Decision Log
 
@@ -19,6 +19,7 @@ Goal: validate a video input and report the metadata needed by later frame proce
 | D-005 | 2026-07-25 | Publish code while keeping personal videos and generated artifacts local. | Supports recruiter review without exposing private practice footage. |
 | D-006 | 2026-07-25 | Use deterministic, evidence-linked feedback before training a quality model. | Professional clips alone do not provide trustworthy coaching labels. |
 | D-007 | 2026-07-27 | Add a learner-led Video Inspector before pose estimation. | Establishes the video input boundary in a small feature that can be implemented and tested collaboratively. |
+| D-008 | 2026-07-29 | Sample decoded frames using presentation timestamps and yield them as a generator. | Supports variable frame timing while limiting memory use and pose-processing cost. |
 
 ## Experiment and Debug Log
 
@@ -28,16 +29,16 @@ Goal: validate a video input and report the metadata needed by later frame proce
 
 ## Verification Status
 
-`python -m pytest -v`: **3 passed** on Python 3.12.13 with PyAV 18.0.0.
+`python -m pytest -v`: **9 passed** on Python 3.12.13 with PyAV 18.0.0.
 
-Covered behaviors: readable-video metadata, missing-file propagation, and rejection of media without a video stream.
+Covered behaviors include video inspection, timestamped RGB sampling, invalid sampling rates, missing-file propagation, and rejection of media without a video stream.
 
 ## Milestones
 
 | Milestone | Status | Evidence |
 | --- | --- | --- |
 | M0 — Video inspector | Complete | Inspector implemented; 3 automated tests pass. |
-| M1 — Pose baseline | Not started | Pending implementation and benchmark clips. |
+| M1 — Pose baseline | In progress | Timestamped RGB frame sampler implemented; pose estimation not started. |
 | M2 — Upload vertical slice | Not started | — |
 | M3 — Stroke detection | Not started | — |
 | M4 — Explainable feedback | Not started | — |
@@ -59,3 +60,16 @@ Covered behaviors: readable-video metadata, missing-file propagation, and reject
 - Activate the environment with `source .venv/bin/activate`; run all tests from the project root with `python -m pytest -v`.
 
 **Next session:** Define and approve a small Frame Sampler that yields timestamped frames at a target FPS. Do not begin pose estimation yet. After sampling is reliable, add a pose backend; MediaPipe remains the recommended first baseline, with YOLO Pose reserved for comparison if needed.
+
+### 2026-07-29
+
+**Completed:** Added a generator-based Frame Sampler that decodes a video in sequence, selects frames at a configurable target rate using presentation timestamps, converts selected frames to RGB, and preserves their source indexes and timestamps. Added success and failure-path tests. Final check: **9 passed**.
+
+**Remember:**
+
+- A frame timestamp is `PTS × time_base`; source frame indexes alone are unreliable for variable-frame-rate video.
+- Decoding reconstructs available frames but cannot invent missing frames or remove timestamp gaps.
+- Advancing the sampling boundary past the current timestamp prevents rapid catch-up after a large gap.
+- Generator code runs when it is consumed, so tests use `list(...)` to trigger validation and decoding.
+
+**Next:** Correct the Video Inspector's duration calculation to prefer the selected video stream's duration over the whole container duration. Then begin the MediaPipe pose-estimation boundary as a separate approved feature.
