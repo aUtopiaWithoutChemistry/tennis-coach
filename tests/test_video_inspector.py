@@ -1,5 +1,7 @@
-import pytest
 from pathlib import Path
+
+import av
+import pytest
 
 from backend.video_inspector import inspect_video
 
@@ -29,3 +31,13 @@ def test_inspect_video_rejects_audio_only_file(audio_only_file: Path) -> None:
         inspect_video(str(audio_only_file))
 
 
+def test_inspect_video_uses_video_stream_duration(
+    video_with_longer_audio: Path,
+) -> None:
+    with av.open(video_with_longer_audio) as container:
+        assert container.duration // 1_000 == 2_000
+
+    metadata = inspect_video(str(video_with_longer_audio))
+
+    assert metadata.source_duration_ms == 1_000
+    assert isinstance(metadata.source_duration_ms, int)

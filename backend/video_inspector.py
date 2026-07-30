@@ -41,11 +41,12 @@ def inspect_video(video_path: str) -> VideoMetadata:
         height = first_frame.height
         codec = stream.codec_context.name or None
 
-        duration_ms = (
-            container.duration // 1000
-            if container.duration is not None
-            else None
-        )
+        if stream.duration is not None and stream.time_base is not None:
+            duration_ms = round(stream.duration * stream.time_base * 1000)
+        elif container.duration is not None:
+            duration_ms = container.duration // 1000
+        else:
+            duration_ms = None
 
         return VideoMetadata(
             source_path=video_path,
