@@ -4,9 +4,9 @@ This is a concise record of decisions, experiments, resolved failures, verified 
 
 ## Current Milestone
 
-**M1 — Pose baseline: frame-sampling foundation complete**
+**M1 — Pose baseline: MediaPipe mapping in progress**
 
-Current goal: produce timestamped RGB frames that a pose estimator can process without loading an entire video into memory.
+Current goal: map MediaPipe's raw landmarks into the project's timestamped pose schema, then connect that mapping to sampled RGB frames.
 
 ## Decision Log
 
@@ -20,25 +20,27 @@ Current goal: produce timestamped RGB frames that a pose estimator can process w
 | D-006 | 2026-07-25 | Use deterministic, evidence-linked feedback before training a quality model. | Professional clips alone do not provide trustworthy coaching labels. |
 | D-007 | 2026-07-27 | Add a learner-led Video Inspector before pose estimation. | Establishes the video input boundary in a small feature that can be implemented and tested collaboratively. |
 | D-008 | 2026-07-29 | Sample decoded frames using presentation timestamps and yield them as a generator. | Supports variable frame timing while limiting memory use and pose-processing cost. |
+| D-009 | 2026-07-29 | Use MediaPipe as the MVP pose baseline and reserve YOLO26 Pose for a later benchmark. | MediaPipe provides 33 landmarks, timestamp-aware video processing, and a simpler license fit; the MVP needs landmarks rather than custom pose-model training. |
 
 ## Experiment and Debug Log
 
 | ID | Date | Observation | Resolution |
 | --- | --- | --- | --- |
 | E-001 | 2026-07-27 | A one-frame AAC fixture raised `av.error.ArgumentError` while flushing the encoder, so the test errored before reaching the inspector. | Replaced compressed AAC/M4A with deterministic PCM/WAV audio and reran the full suite twice. |
+| E-002 | 2026-07-29 | A mixed-stream Matroska fixture did not expose a separate video-stream duration, so the regression test exercised the container fallback. | Switched the fixture to MOV, which exposed the one-second video duration separately from its two-second audio and container duration. |
 
 ## Verification Status
 
-`python -m pytest -v`: **9 passed** on Python 3.12.13 with PyAV 18.0.0.
+`python -m pytest -v`: **10 passed, 3 skipped** on Python 3.12.13 with PyAV 18.0.0 and MediaPipe 1.0.0.
 
-Covered behaviors include video inspection, timestamped RGB sampling, invalid sampling rates, missing-file propagation, and rejection of media without a video stream.
+The skipped tests describe the unfinished MediaPipe result mapping; completed coverage includes stream-specific duration, video inspection, timestamped RGB sampling, invalid sampling rates, and invalid media handling.
 
 ## Milestones
 
 | Milestone | Status | Evidence |
 | --- | --- | --- |
 | M0 — Video inspector | Complete | Inspector implemented; 3 automated tests pass. |
-| M1 — Pose baseline | In progress | Timestamped RGB frame sampler implemented; pose estimation not started. |
+| M1 — Pose baseline | In progress | MediaPipe installed; pose schema and fake-result mapping tests scaffolded; mapping and real-video inference remain unfinished. |
 | M2 — Upload vertical slice | Not started | — |
 | M3 — Stroke detection | Not started | — |
 | M4 — Explainable feedback | Not started | — |
@@ -72,4 +74,8 @@ Covered behaviors include video inspection, timestamped RGB sampling, invalid sa
 - Advancing the sampling boundary past the current timestamp prevents rapid catch-up after a large gap.
 - Generator code runs when it is consumed, so tests use `list(...)` to trigger validation and decoding.
 
-**Next:** Correct the Video Inspector's duration calculation to prefer the selected video stream's duration over the whole container duration. Then begin the MediaPipe pose-estimation boundary as a separate approved feature.
+**Additional progress:** Corrected and merged the Video Inspector duration calculation so it prefers the selected video stream over a longer container stream. Selected MediaPipe for the MVP, installed MediaPipe 1.0.0, and added immutable `PoseLandmark` and `PoseFrame` schemas plus a learner-owned result-mapping scaffold. Private broadcast clips under `data/output_clips/` are available for a later smoke test and remain ignored by Git.
+
+**Remember:** MediaPipe supplies body landmarks; our later code must calculate angles, rotations, stroke phases, and feedback. Professional clips may help build reference distributions, but they are not trustworthy quality labels by themselves.
+
+**Next:** Complete `pose_frame_from_result`, enable its three fake-result tests, then connect the mapping to MediaPipe video inference before running a private smoke test.
