@@ -4,9 +4,9 @@ This is a concise record of decisions, experiments, resolved failures, verified 
 
 ## Current Milestone
 
-**M1 — Pose baseline: MediaPipe mapping in progress**
+**M1 — Pose baseline complete**
 
-Current goal: map MediaPipe's raw landmarks into the project's timestamped pose schema, then connect that mapping to sampled RGB frames.
+MediaPipe pose inference now runs end to end on sampled frames from a real tennis drill clip. The next milestone is the upload vertical slice; visual landmark QA should precede numerical coaching metrics.
 
 ## Decision Log
 
@@ -28,19 +28,20 @@ Current goal: map MediaPipe's raw landmarks into the project's timestamped pose 
 | --- | --- | --- | --- |
 | E-001 | 2026-07-27 | A one-frame AAC fixture raised `av.error.ArgumentError` while flushing the encoder, so the test errored before reaching the inspector. | Replaced compressed AAC/M4A with deterministic PCM/WAV audio and reran the full suite twice. |
 | E-002 | 2026-07-29 | A mixed-stream Matroska fixture did not expose a separate video-stream duration, so the regression test exercised the container fallback. | Switched the fixture to MOV, which exposed the one-second video duration separately from its two-second audio and container duration. |
+| E-003 | 2026-07-30 | Pose Landmarker Lite detected 0 of 14 frames in a wide broadcast clip; players occupied too few pixels in the full frame. A lower-court crop detected 5 of 14 frames, and a closer rear-court drill clip detected 14 of 20 frames without cropping. | Treat camera framing and player scale as input requirements. Keep wide broadcast footage as a later cropping benchmark rather than the primary MVP domain. |
 
 ## Verification Status
 
-`python -m pytest -v`: **10 passed, 3 skipped** on Python 3.12.13 with PyAV 18.0.0 and MediaPipe 1.0.0.
+`python -m pytest -v`: **18 passed** on Python 3.12.13 with PyAV 18.0.0 and MediaPipe 1.0.0.
 
-The skipped tests describe the unfinished MediaPipe result mapping; completed coverage includes stream-specific duration, video inspection, timestamped RGB sampling, invalid sampling rates, and invalid media handling.
+Coverage includes stream-specific duration, video inspection, timestamped RGB sampling, invalid sampling rates, invalid media handling, MediaPipe result mapping, adapter behavior, and missing-model validation. Real-model inference is verified separately as a local smoke test.
 
 ## Milestones
 
 | Milestone | Status | Evidence |
 | --- | --- | --- |
 | M0 — Video inspector | Complete | Inspector implemented; 3 automated tests pass. |
-| M1 — Pose baseline | In progress | MediaPipe installed; pose schema and fake-result mapping tests scaffolded; mapping and real-video inference remain unfinished. |
+| M1 — Pose baseline | Complete | Pose mapping and video adapter implemented; 18 automated tests pass; Lite model detected poses in 14 of 20 samples from a real rear-court drill clip. |
 | M2 — Upload vertical slice | Not started | — |
 | M3 — Stroke detection | Not started | — |
 | M4 — Explainable feedback | Not started | — |
@@ -79,3 +80,11 @@ The skipped tests describe the unfinished MediaPipe result mapping; completed co
 **Remember:** MediaPipe supplies body landmarks; our later code must calculate angles, rotations, stroke phases, and feedback. Professional clips may help build reference distributions, but they are not trustworthy quality labels by themselves.
 
 **Next:** Complete `pose_frame_from_result`, enable its three fake-result tests, then connect the mapping to MediaPipe video inference before running a private smoke test.
+
+### 2026-07-30
+
+**Completed:** Connected timestamped RGB frames to MediaPipe video inference and mapped the results into immutable `PoseFrame` values. Added a bounded smoke-test command and verified real inference on a rear-court professional drill clip: Pose Landmarker Lite detected a pose in **14 of 20 samples (70%)**. Downloaded and validated the Full and Heavy bundles for later comparison; all model files remain under the ignored `.models/` directory.
+
+**Remember:** Pose detection depends strongly on how much of the frame the player occupies. A larger pose model cannot recover visual detail that is absent from a distant subject. Use camera-matched practice footage for MVP development, and retain broadcast footage as a harder future test for player localization and cropping.
+
+**Next:** Visually validate that detected landmarks align with the intended player before deriving joint angles or other coaching measurements.
