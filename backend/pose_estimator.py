@@ -88,11 +88,11 @@ def pose_frame_from_result(
     )
 
 
-def estimate_pose_frames(
+def estimate_pose_frames_with_source(
     frames: Iterable[TimestampedFrame],
     landmarker: "mp.tasks.vision.PoseLandmarker",
-) -> Iterator[PoseFrame]:
-    """Run an initialized MediaPipe landmarker on timestamped RGB frames."""
+) -> Iterator[tuple[TimestampedFrame, PoseFrame]]:
+    """Yield each source frame paired with its MediaPipe pose result."""
 
     previous_timestamp_ms: int | None = None
 
@@ -114,4 +114,14 @@ def estimate_pose_frames(
         )
 
         previous_timestamp_ms = frame.timestamp_ms
+        yield frame, pose_frame
+
+
+def estimate_pose_frames(
+    frames: Iterable[TimestampedFrame],
+    landmarker: "mp.tasks.vision.PoseLandmarker",
+) -> Iterator[PoseFrame]:
+    """Run an initialized MediaPipe landmarker on timestamped RGB frames."""
+
+    for _, pose_frame in estimate_pose_frames_with_source(frames, landmarker):
         yield pose_frame
