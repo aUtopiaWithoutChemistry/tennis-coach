@@ -5,6 +5,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "av>=14.0",
     "mediapipe>=1.0.0",
+    "pillow>=12.3.0",
 ]
 
 [dependency-groups]

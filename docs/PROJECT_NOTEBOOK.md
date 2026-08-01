@@ -4,9 +4,9 @@ This is a concise record of decisions, experiments, resolved failures, verified 
 
 ## Current Milestone
 
-**M1 — Pose baseline complete**
+**M1 — Pose visualization complete**
 
-MediaPipe pose inference now runs end to end on sampled frames from a real tennis drill clip. The next milestone is the upload vertical slice; visual landmark QA should precede numerical coaching metrics.
+The project can now turn a real tennis drill clip into a playable H.264 video with timestamped body-pose overlays. Pose inference and visualization are complete; performance and landmark-continuity benchmarking remain before the upload vertical slice.
 
 ## Decision Log
 
@@ -21,6 +21,8 @@ MediaPipe pose inference now runs end to end on sampled frames from a real tenni
 | D-007 | 2026-07-27 | Add a learner-led Video Inspector before pose estimation. | Establishes the video input boundary in a small feature that can be implemented and tested collaboratively. |
 | D-008 | 2026-07-29 | Sample decoded frames using presentation timestamps and yield them as a generator. | Supports variable frame timing while limiting memory use and pose-processing cost. |
 | D-009 | 2026-07-29 | Use MediaPipe as the MVP pose baseline and reserve YOLO26 Pose for a later benchmark. | MediaPipe provides 33 landmarks, timestamp-aware video processing, and a simpler license fit; the MVP needs landmarks rather than custom pose-model training. |
+| D-010 | 2026-07-31 | Keep all MediaPipe landmarks in numerical pose data but render only body landmarks 11–32. | Facial landmarks add visual clutter to a full-body tennis overlay but may remain useful to later analysis. |
+| D-011 | 2026-07-31 | Stream source frames and pose results together into a bounded, silent, constant-frame-rate H.264 preview. | Preserves the source pixels needed for drawing, limits memory use, and creates an easy-to-review MVP artifact. |
 
 ## Experiment and Debug Log
 
@@ -29,19 +31,22 @@ MediaPipe pose inference now runs end to end on sampled frames from a real tenni
 | E-001 | 2026-07-27 | A one-frame AAC fixture raised `av.error.ArgumentError` while flushing the encoder, so the test errored before reaching the inspector. | Replaced compressed AAC/M4A with deterministic PCM/WAV audio and reran the full suite twice. |
 | E-002 | 2026-07-29 | A mixed-stream Matroska fixture did not expose a separate video-stream duration, so the regression test exercised the container fallback. | Switched the fixture to MOV, which exposed the one-second video duration separately from its two-second audio and container duration. |
 | E-003 | 2026-07-30 | Pose Landmarker Lite detected 0 of 14 frames in a wide broadcast clip; players occupied too few pixels in the full frame. A lower-court crop detected 5 of 14 frames, and a closer rear-court drill clip detected 14 of 20 frames without cropping. | Treat camera framing and player scale as input requirements. Keep wide broadcast footage as a later cropping benchmark rather than the primary MVP domain. |
+| E-004 | 2026-07-31 | The first pose-overlay images showed several tightly grouped dots around the player's head. | Confirmed that these were MediaPipe facial landmarks 0–10 and excluded them from drawing while preserving them in pose results. |
 
 ## Verification Status
 
-`python -m pytest -v`: **18 passed** on Python 3.12.13 with PyAV 18.0.0 and MediaPipe 1.0.0.
+`python -m pytest -v`: **27 passed** on Python 3.12.13 with PyAV 18.0.0 and MediaPipe 1.0.0.
 
-Coverage includes stream-specific duration, video inspection, timestamped RGB sampling, invalid sampling rates, invalid media handling, MediaPipe result mapping, adapter behavior, and missing-model validation. Real-model inference is verified separately as a local smoke test.
+Coverage includes stream-specific duration, video inspection, timestamped RGB sampling, invalid media handling, MediaPipe result mapping and adapter behavior, landmark-to-pixel conversion, body-only overlay drawing, diagnostic image output, and decodable H.264 video rendering. Real-model inference and visual alignment are verified separately with local smoke tests and gitignored artifacts.
 
 ## Milestones
 
 | Milestone | Status | Evidence |
 | --- | --- | --- |
 | M0 — Video inspector | Complete | Inspector implemented; 3 automated tests pass. |
-| M1 — Pose baseline | Complete | Pose mapping and video adapter implemented; 18 automated tests pass; Lite model detected poses in 14 of 20 samples from a real rear-court drill clip. |
+| M1a — Pose inference baseline | Complete | Pose mapping and video adapter implemented; Lite model detected poses in 14 of 20 samples from a real rear-court drill clip. |
+| M1b — Pose visualization | Complete | Body-only diagnostic images and a playable 100-frame H.264 overlay video generated; 27 automated tests pass. |
+| M1c — Pose benchmark | Not started | Processing speed, landmark coverage, and missing-frame continuity still need measurement. |
 | M2 — Upload vertical slice | Not started | — |
 | M3 — Stroke detection | Not started | — |
 | M4 — Explainable feedback | Not started | — |
@@ -88,3 +93,11 @@ Coverage includes stream-specific duration, video inspection, timestamped RGB sa
 **Remember:** Pose detection depends strongly on how much of the frame the player occupies. A larger pose model cannot recover visual detail that is absent from a distant subject. Use camera-matched practice footage for MVP development, and retain broadcast footage as a harder future test for player localization and cropping.
 
 **Next:** Visually validate that detected landmarks align with the intended player before deriving joint angles or other coaching measurements.
+
+### 2026-07-31
+
+**Completed:** Added reusable pose-overlay drawing, extended the smoke test to save diagnostic PNGs, and built a streaming video renderer that pairs each sampled source frame with its `PoseFrame` and writes a bounded, silent H.264 MP4. Removed facial landmarks 0–10 from the drawing while retaining them in numerical pose data. Generated a visually plausible 1280×720, 10 FPS, 100-frame local artifact. Final check: **27 passed**.
+
+**Remember:** Calling `next()` to inspect the first source/pose pair consumes it, so `chain((first_pair,), paired_frames)` places it back before the remaining iterator. H.264 encoding may buffer frames, so the encoder must be flushed after the loop. The renderer currently creates a constant-frame-rate visualization without source audio; it is a diagnostic artifact, not yet a full-fidelity export.
+
+**Next:** Benchmark processing time, required-joint coverage, and missing-pose continuity on camera-matched clips before beginning the upload vertical slice.

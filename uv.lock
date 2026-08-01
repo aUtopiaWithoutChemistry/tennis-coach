@@ -368,6 +368,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "av" },
     { name = "mediapipe" },
+    { name = "pillow" },
 ]
 
 [package.dev-dependencies]
@@ -379,6 +380,7 @@ dev = [
 requires-dist = [
     { name = "av", specifier = ">=14.0" },
     { name = "mediapipe", specifier = ">=1.0.0" },
+    { name = "pillow", specifier = ">=12.3.0" },
 ]
 
 [package.metadata.requires-dev]
