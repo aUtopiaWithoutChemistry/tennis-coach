@@ -2,7 +2,7 @@
 
 A local-first application that analyzes tennis practice videos and aims to provide clear, evidence-linked feedback for recreational learners.
 
-> **Project status:** Early development. The Video Inspector milestone is complete; pose estimation and stroke analysis have not been implemented yet.
+> **Project status:** Video ingestion, timestamped frame sampling, pose estimation, diagnostic visualization, and baseline benchmarking are complete. Stroke-phase analysis is next.
 
 ## Why I'm Building This
 
@@ -30,13 +30,15 @@ Generate coaching feedback
 
 ## Current Capabilities
 
-The first completed component is the **Video Inspector**. It:
+The current local pipeline:
 
 - Extracts video resolution, frame rate, duration, frame-count metadata, and codec.
 - Confirms that the file contains a readable video stream.
-- Reports missing files and audio-only media as errors.
-- Preserves unavailable metadata as `None` instead of inventing values.
-- Includes automated tests for successful and failure paths.
+- Samples decoded RGB frames using presentation timestamps.
+- Estimates 33 MediaPipe body landmarks in video mode.
+- Renders playable H.264 pose and confidence-diagnostic overlays.
+- Benchmarks detection, per-joint usability, failure reasons, continuity, and processing speed.
+- Handles missing files, audio-only media, and unavailable metadata explicitly.
 
 ## Current Usage
 
@@ -69,20 +71,21 @@ Run the tests:
 python -m pytest -v
 ```
 
-Current verified result: **3 tests passed**.
+Current verified result: **46 tests passed**.
 
 ## Roadmap
 
 - [x] Inspect and validate video inputs
-- [ ] Decode and sample timestamped frames
-- [ ] Extract body landmarks from sampled frames
-- [ ] Render a synchronized pose overlay
+- [x] Decode and sample timestamped frames
+- [x] Extract body landmarks from sampled frames
+- [x] Render a synchronized pose overlay
+- [x] Evaluate baseline pose continuity and processing performance
 - [ ] Detect forehands and movement phases
 - [ ] Generate explainable coaching feedback
 - [ ] Build the local React and Python application
-- [ ] Evaluate accuracy and processing performance
+- [ ] Evaluate stroke-phase pose accuracy on annotated tennis data
 
-See the detailed [project plan](docs/PROJECT_PLAN.md) and [engineering notebook](docs/PROJECT_NOTEBOOK.md).
+See the detailed [project plan](docs/PROJECT_PLAN.md), [engineering notebook](docs/PROJECT_NOTEBOOK.md), and [pose-model benchmark](docs/POSE_MODEL_BENCHMARK.md).
 
 ## Privacy and Data
 

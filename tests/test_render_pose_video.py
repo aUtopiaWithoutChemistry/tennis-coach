@@ -69,3 +69,49 @@ def test_render_pose_video_writes_bounded_mp4(
     assert summary.rendered_frame_count == 3
     assert summary.detected_pose_count == 2
     assert len(decoded_frames) == 3
+
+
+def test_render_pose_video_uses_diagnostic_overlay_when_requested(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frame = make_frame(0, 0)
+    pose = make_pose(0, 0)
+    overlay_calls: list[str] = []
+
+    monkeypatch.setattr(
+        render_pose_video,
+        "sample_video_frames",
+        lambda *_: iter((frame,)),
+    )
+    monkeypatch.setattr(
+        render_pose_video,
+        "create_pose_landmarker",
+        lambda *_: nullcontext(object()),
+    )
+    monkeypatch.setattr(
+        render_pose_video,
+        "estimate_pose_frames_with_source",
+        lambda *_: iter(((frame, pose),)),
+    )
+    monkeypatch.setattr(
+        render_pose_video,
+        "draw_pose_overlay",
+        lambda image, _: overlay_calls.append("standard") or image,
+    )
+    monkeypatch.setattr(
+        render_pose_video,
+        "draw_pose_diagnostic_overlay",
+        lambda image, _: overlay_calls.append("diagnostic") or image,
+    )
+
+    render_pose_video.render_pose_video(
+        video_path=Path("unused.mp4"),
+        output_path=tmp_path / "diagnostic.mp4",
+        model_path=Path("unused.task"),
+        target_fps=10.0,
+        max_frames=1,
+        diagnostic_overlays=True,
+    )
+
+    assert overlay_calls == ["diagnostic"]
