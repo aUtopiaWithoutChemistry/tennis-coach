@@ -11,7 +11,7 @@ from backend.pose_estimator import (
     create_pose_landmarker,
     estimate_pose_frames,
 )
-from backend.pose_overlay import draw_pose_overlay
+from backend.pose_overlay import draw_pose_diagnostic_overlay, draw_pose_overlay
 
 DEFAULT_MODEL_PATH = Path(".models/pose_landmarker_lite.task")
 
@@ -36,6 +36,7 @@ def save_pose_overlay(
     source_frame: TimestampedFrame,
     pose_frame: PoseFrame,
     output_dir: Path,
+    diagnostic: bool = False,
 ) -> Path:
     """Render and save one pose overlay using a deterministic filename."""
 
@@ -44,7 +45,8 @@ def save_pose_overlay(
         f"pose_frame_{source_frame.source_frame_index:06d}_"
         f"{source_frame.timestamp_ms:08d}ms.png"
     )
-    overlay = draw_pose_overlay(source_frame.image.to_image(), pose_frame)
+    draw_overlay = draw_pose_diagnostic_overlay if diagnostic else draw_pose_overlay
+    overlay = draw_overlay(source_frame.image.to_image(), pose_frame)
     overlay.save(output_path)
     return output_path
 
@@ -56,6 +58,7 @@ def run_smoke_test(
     max_frames: int,
     overlay_dir: Path | None = None,
     max_overlays: int = 5,
+    diagnostic_overlays: bool = False,
 ) -> PoseSmokeSummary:
     """Run pose inference on at most ``max_frames`` sampled video frames."""
 
@@ -89,7 +92,10 @@ def run_smoke_test(
 
                 if overlay_dir is not None and len(saved_overlay_paths) < max_overlays:
                     output_path = save_pose_overlay(
-                        sampled_frame, estimated_frame, overlay_dir
+                        sampled_frame,
+                        estimated_frame,
+                        overlay_dir,
+                        diagnostic=diagnostic_overlays,
                     )
                     saved_overlay_paths.append(output_path)
 
@@ -109,6 +115,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-frames", type=int, default=20)
     parser.add_argument("--overlay-dir", type=Path)
     parser.add_argument("--max-overlays", type=int, default=5)
+    parser.add_argument("--diagnostic-overlays", action="store_true")
     return parser.parse_args()
 
 
@@ -121,6 +128,7 @@ def main() -> None:
         max_frames=args.max_frames,
         overlay_dir=args.overlay_dir,
         max_overlays=args.max_overlays,
+        diagnostic_overlays=args.diagnostic_overlays,
     )
 
     print(f"Sampled frames: {summary.sampled_frame_count}")

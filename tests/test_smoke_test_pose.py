@@ -72,7 +72,9 @@ def test_run_smoke_test_saves_only_requested_detected_overlays(
         source_frame: TimestampedFrame,
         pose_frame: PoseFrame,
         output_dir: Path,
+        diagnostic: bool = False,
     ) -> Path:
+        assert diagnostic is False
         saved_pairs.append(
             (source_frame.source_frame_index, pose_frame.source_frame_index)
         )

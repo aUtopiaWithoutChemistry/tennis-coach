@@ -14,7 +14,7 @@ from backend.pose_estimator import (
     create_pose_landmarker,
     estimate_pose_frames_with_source,
 )
-from backend.pose_overlay import draw_pose_overlay
+from backend.pose_overlay import draw_pose_diagnostic_overlay, draw_pose_overlay
 
 DEFAULT_MODEL_PATH = Path(".models/pose_landmarker_lite.task")
 
@@ -32,6 +32,7 @@ def render_pose_video(
     model_path: Path,
     target_fps: float = 10.0,
     max_frames: int = 100,
+    diagnostic_overlays: bool = False,
 ) -> PoseVideoSummary:
     """Stream sampled pose overlays into a constant-frame-rate H.264 MP4."""
 
@@ -45,6 +46,11 @@ def render_pose_video(
         max_frames,
     )
     output_rate = Fraction(str(target_fps)).limit_denominator(1_000)
+
+    if diagnostic_overlays:
+        draw_overlay = draw_pose_diagnostic_overlay
+    else:
+        draw_overlay = draw_pose_overlay
 
     with create_pose_landmarker(model_path) as landmarker:
         paired_frames = estimate_pose_frames_with_source(
@@ -66,7 +72,7 @@ def render_pose_video(
             output_stream.pix_fmt = "yuv420p"
 
             for source_frame, pose_frame in chain((first_pair,), paired_frames):
-                overlay = draw_pose_overlay(
+                overlay = draw_overlay(
                     source_frame.image.to_image(),
                     pose_frame,
                 )
@@ -101,6 +107,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model-path", type=Path, default=DEFAULT_MODEL_PATH)
     parser.add_argument("--target-fps", type=float, default=10.0)
     parser.add_argument("--max-frames", type=int, default=100)
+    parser.add_argument("--diagnostic-overlays", action="store_true")
     return parser.parse_args()
 
 
@@ -112,6 +119,7 @@ def main() -> None:
         model_path=args.model_path,
         target_fps=args.target_fps,
         max_frames=args.max_frames,
+        diagnostic_overlays=args.diagnostic_overlays,
     )
     print(f"Rendered frames: {summary.rendered_frame_count}")
     print(f"Frames with a pose: {summary.detected_pose_count}")

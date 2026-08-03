@@ -2,7 +2,13 @@ from PIL import Image
 import pytest
 
 from backend.pose_estimator import PoseFrame, PoseLandmark
-from backend.pose_overlay import draw_pose_overlay, landmark_to_pixel
+from backend.pose_overlay import (
+    DIAGNOSTIC_LOW_CONFIDENCE_COLOR,
+    DIAGNOSTIC_USABLE_COLOR,
+    draw_pose_diagnostic_overlay,
+    draw_pose_overlay,
+    landmark_to_pixel,
+)
 
 
 def make_landmark(
@@ -78,3 +84,16 @@ def test_draw_pose_overlay_hides_face_landmarks() -> None:
 
     assert overlay.getpixel((10, 80)) == (0, 0, 0)
     assert overlay.getpixel((80, 20)) == (255, 64, 64)
+
+
+def test_diagnostic_overlay_distinguishes_low_confidence_landmarks() -> None:
+    landmarks = [make_landmark(x=0.1, y=0.1) for _ in range(33)]
+    landmarks[15] = make_landmark(x=0.4, y=0.5, visibility=0.4)
+    landmarks[16] = make_landmark(x=0.7, y=0.5)
+    pose_frame = PoseFrame(0, 100, tuple(landmarks))
+    image = Image.new("RGB", (101, 101), color=(0, 0, 0))
+
+    overlay = draw_pose_diagnostic_overlay(image, pose_frame)
+
+    assert overlay.getpixel((40, 50)) == DIAGNOSTIC_LOW_CONFIDENCE_COLOR
+    assert overlay.getpixel((70, 50)) == DIAGNOSTIC_USABLE_COLOR
