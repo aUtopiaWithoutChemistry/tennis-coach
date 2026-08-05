@@ -41,7 +41,20 @@ def fake_pose_result(landmark_count: int = 33) -> SimpleNamespace:
         )
         for index in range(landmark_count)
     ]
-    return SimpleNamespace(pose_landmarks=[landmarks])
+    world_landmarks = [
+        SimpleNamespace(
+            x=index / 10,
+            y=index / 10 + 0.2,
+            z=-index / 10,
+            visibility=0.7,
+            presence=0.6,
+        )
+        for index in range(33)
+    ]
+    return SimpleNamespace(
+        pose_landmarks=[landmarks],
+        pose_world_landmarks=[world_landmarks],
+    )
 
 
 def fake_timestamped_frame(
@@ -72,6 +85,18 @@ def test_pose_frame_from_result_maps_landmarks() -> None:
     assert pose_frame.landmarks[32].x == 0.32
 
 
+def test_pose_frame_from_result_maps_world_landmarks() -> None:
+    pose_frame = pose_frame_from_result(12, 500, fake_pose_result())
+
+    assert pose_frame.world_landmarks is not None
+    assert len(pose_frame.world_landmarks) == 33
+    assert pose_frame.world_landmarks[0].x == 0.0
+    assert pose_frame.world_landmarks[0].y == 0.2
+    assert pose_frame.world_landmarks[32].x == 3.2
+    assert pose_frame.world_landmarks[32].visibility == 0.7
+    assert pose_frame.world_landmarks[32].presence == 0.6
+
+
 def test_pose_frame_from_result_preserves_missing_pose() -> None:
     result = SimpleNamespace(pose_landmarks=[])
 
@@ -80,6 +105,17 @@ def test_pose_frame_from_result_preserves_missing_pose() -> None:
     assert pose_frame.source_frame_index == 3
     assert pose_frame.timestamp_ms == 250
     assert pose_frame.landmarks is None
+    assert pose_frame.world_landmarks is None
+
+
+def test_pose_frame_from_result_preserves_missing_world_landmarks() -> None:
+    result = fake_pose_result()
+    result.pose_world_landmarks = []
+
+    pose_frame = pose_frame_from_result(0, 0, result)
+
+    assert pose_frame.landmarks is not None
+    assert pose_frame.world_landmarks is None
 
 
 def test_pose_frame_from_result_rejects_wrong_landmark_count() -> None:
@@ -87,11 +123,28 @@ def test_pose_frame_from_result_rejects_wrong_landmark_count() -> None:
         pose_frame_from_result(0, 0, fake_pose_result(landmark_count=32))
 
 
+def test_pose_frame_from_result_rejects_wrong_world_landmark_count() -> None:
+    result = fake_pose_result()
+    result.pose_world_landmarks[0].pop()
+
+    with pytest.raises(ValueError, match="33 world landmarks"):
+        pose_frame_from_result(0, 0, result)
+
+
 def test_pose_frame_from_result_rejects_malformed_landmark() -> None:
     malformed_landmark = SimpleNamespace(x=None, y=0.1, z=0.2)
     result = SimpleNamespace(pose_landmarks=[[malformed_landmark] * 33])
 
     with pytest.raises(ValueError, match="Malformed"):
+        pose_frame_from_result(0, 0, result)
+
+
+def test_pose_frame_from_result_rejects_malformed_world_landmark() -> None:
+    malformed_landmark = SimpleNamespace(x=None, y=0.1, z=0.2)
+    result = fake_pose_result()
+    result.pose_world_landmarks = [[malformed_landmark] * 33]
+
+    with pytest.raises(ValueError, match="Malformed world landmark"):
         pose_frame_from_result(0, 0, result)
 
 

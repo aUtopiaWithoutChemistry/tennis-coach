@@ -41,12 +41,56 @@ class PoseLandmark:
 
 
 @dataclass(frozen=True)
+class WorldPoseLandmark:
+    """One hip-centered 3D body landmark measured in meters."""
+
+    x: float
+    y: float
+    z: float
+    visibility: float | None
+    presence: float | None
+
+
+@dataclass(frozen=True)
 class PoseFrame:
-    """Pose landmarks associated with one timestamped source frame."""
+    """Image and world landmarks associated with one source frame."""
 
     source_frame_index: int
     timestamp_ms: int
     landmarks: tuple[PoseLandmark, ...] | None
+    world_landmarks: tuple[WorldPoseLandmark, ...] | None = None
+
+
+def _world_landmarks_from_result(
+    result: "mp.tasks.vision.PoseLandmarkerResult",
+) -> tuple[WorldPoseLandmark, ...] | None:
+    """Convert the first optional MediaPipe world pose into project data."""
+
+    world_poses = getattr(result, "pose_world_landmarks", None)
+
+    if not world_poses:
+        return None
+
+    world_pose = world_poses[0]
+
+    if len(world_pose) != EXPECTED_LANDMARK_COUNT:
+        raise ValueError("Expected 33 world landmarks")
+
+    world_landmarks = []
+    for lm in world_pose:
+        if lm.x is None or lm.y is None or lm.z is None:
+            raise ValueError("Malformed world landmark data")
+        world_landmarks.append(
+            WorldPoseLandmark(
+                x=lm.x,
+                y=lm.y,
+                z=lm.z,
+                visibility=getattr(lm, "visibility", None),
+                presence=getattr(lm, "presence", None),
+            )
+        )
+
+    return tuple(world_landmarks)
 
 
 def pose_frame_from_result(
@@ -85,6 +129,7 @@ def pose_frame_from_result(
         source_frame_index=source_frame_index,
         timestamp_ms=timestamp_ms,
         landmarks=tuple(landmarks),
+        world_landmarks=_world_landmarks_from_result(result),
     )
 
 
