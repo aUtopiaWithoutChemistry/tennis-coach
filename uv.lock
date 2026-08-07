@@ -369,6 +369,7 @@ dependencies = [
     { name = "av" },
     { name = "mediapipe" },
     { name = "numpy" },
+    { name = "opencv-contrib-python" },
     { name = "pillow" },
 ]
 
@@ -382,6 +383,7 @@ requires-dist = [
     { name = "av", specifier = ">=14.0" },
     { name = "mediapipe", specifier = ">=1.0.0" },
     { name = "numpy", specifier = ">=1.26" },
+    { name = "opencv-contrib-python", specifier = ">=5.0.0" },
     { name = "pillow", specifier = ">=12.3.0" },
 ]
 

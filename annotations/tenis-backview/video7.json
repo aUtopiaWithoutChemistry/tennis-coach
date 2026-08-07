@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "source_video": "video7.mp4",
+  "strokes": [
+    {
+      "start_ms": 1583,
+      "contact_ms": 2283,
+      "end_ms": 2633,
+      "stroke_type": "forehand"
+    },
+    {
+      "start_ms": 4649,
+      "contact_ms": 5298,
+      "end_ms": 5648,
+      "stroke_type": "forehand"
+    },
+    {
+      "start_ms": 7881,
+      "contact_ms": 8481,
+      "end_ms": 8881,
+      "stroke_type": "forehand"
+    },
+    {
+      "start_ms": 10897,
+      "contact_ms": 11263,
+      "end_ms": 11530,
+      "stroke_type": "backhand"
+    }
+  ]
+}
